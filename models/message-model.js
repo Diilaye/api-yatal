@@ -18,6 +18,12 @@ const MessageModel = new Schema({
 
     sender: { type: mongoose.Schema.Types.ObjectId, ref: 'concourant' },
 
+    success : {
+        type : String,
+        enum: ["0", "1"],
+        default: "0"
+    }
+
    
 }, {
     toJSON: {

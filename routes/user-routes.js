@@ -8,6 +8,7 @@ router.post('/auth', require('../controllers/admin').auth);
 router.get('/tel', require('../controllers/admin').getAllTell);
 router.get('/concurants', require('../controllers/admin').allConcurant);
 router.post('/sms',  orangeSmsMidlle ,require('../controllers/admin').sendSms);
+router.post('/mail' ,require('../controllers/admin').sendMailContact);
 
 
 

@@ -7,7 +7,7 @@ const axios = require('axios');
 
 const coucurantModel = require('../models/concurant-model');
 
-const messageModel = require('../models/concurant-model');
+const messageModel = require('../models/message-model');
 
 const bcrytjs = require('bcryptjs');
 
@@ -19,6 +19,7 @@ const path = require('path');
 
 
 
+const nodemailer = require('nodemailer');
 
 
 exports.store = async (req, res) => {
@@ -189,60 +190,124 @@ exports.getAllTell = async (req,res) => {
 
 exports.sendSms = async  (req, res)  => {
     
-    // let  {telephones , users} = req.body;
+    let  {telephones  , subTitle , desc} = req.body;
 
     // telephones.push('772488807');
     // telephones.push('772406480');
+
+    // const telephones = ['772488807']
     
-    const  telephones = 
-        [
-        "776435932",
-        "783408082",
-        "784437359",
-        "776691686",
-        "768695074",
-        "775202760",
-        "761011066",
-        "756315457",
-        "773392516",
-        "765742441",
-        "775943129",
-        "769589780",
-    ];
+    //const  telephones = 
+      //  [
+
+           
+            // "763865719",
+            // "763290893",
+            // "777201932",
+            // "767477992",
+            // "762861684",
+            // "780131819",
+            // "771520996",
+            // "778794386",
+            // "776916687",
+            // "768385872",
+            // "767723610",
+            // "770315480",
+            // "766960676",
+            // "766960676",
+            // "777201973",
+            // "774714913"
+
+        // "789670688",
+        // "766035408",
+        // "770185363",
+        // "781107668",
+        // "768131983",
+        // "786817205",
+        // "762555523",
+        // "780131819",
+        // "779055623",
+        // "765002543",
+        // "767762131"
+        // "767485139",
+        // "781979239",
+        // "766960676",
+        // "766653950",
+        // "768792856",
+        // "762605549",
+        // "784430248",
+        // "752527434",
+        // "762570502",
+   // ];
 
    let i =0;
+   let tabEchec= [];
     for await (const element of telephones) {
         console.log(element);
+      try {
+          
+        const user = await coucurantModel.findOne({
+            telephone : element
+        });
+
+        console.log("user");
+        console.log(user);
+
+        const message = messageModel();
+
+        message.titre = "Concours C3s / YMA";
+        message.subTitle = subTitle;
+        message.desc = desc;
+        message.sender = user._id;
+        const messageSave = await message.save();
+        
+
+        console.log("messageSave");
+        console.log(messageSave);
         
        
     let data = JSON.stringify({ "outboundSMSMessageRequest": {
         "address": "tel:+221"+element, 
         "senderAddress": "tel:+221772406480",
         "outboundSMSTextMessage": { 
-           "message": "Concours C3s / YMA  \n\nNIONGUI LAY NDOKÉL TÉ DILA YEUGEULNÉ DIOT NANU SA DÉPÔT CANDIDATURE DIEUM CI DIONGANTÉ YAATAL MBINDUM AL XURAN BI C3S DI AMAL." }
+           "message": `${messageSave.titre}  \n\n ${messageSave.subTitle}   \n\n  ${messageSave.desc}`}
         }
         });
          let config = {
            method: 'post', maxBodyLength: Infinity,
-           url: 'https://api.orange.com/smsmessaging/v1/outbound/tel:+221772488807/requests', 
+           url: 'https://api.orange.com/smsmessaging/v1/outbound/tel:+221772406480/requests', 
            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer '+req.accessToken }, 
            data : data 
        }; 
-       axios.request(config) .then((response) => { 
+       axios.request(config) .then(async (response) => { 
         console.log("element success");
         console.log(element);
+            const m = await messageModel.findById(messageSave._id);
+
+            m.success = "1";
+
+            const ms = await m.save();
           
-       }) .catch((error) => { 
+       }) .catch(async (error) => { 
+        tabEchec.push(element);
+        const m = await messageModel.findById(messageSave._id);
+
+        m.success = "1";
+
+        const ms = await m.save();
            console.log("element erreur");
            console.log(element);
            console.log(error);
         });
+      } catch (error) {
+        tabEchec.push(element);
+      }
     }
 
     
 
     return res.json({
-        data : null
+        data : tabEchec
     })
 
 
@@ -250,6 +315,62 @@ exports.sendSms = async  (req, res)  => {
     
 
 
+
+}
+
+exports.sendMailContact = async (req ,res ) => {
+
+   try {
+    const {prenom ,nom , telephone , message , email} =req.body ;
+
+    // Configurer le transporteur SMTP
+//     const transporter = nodemailer.createTransport({
+//      service: 'IMAP',
+//      host: 'ssl0.ovh.net', // 'ssl0.ovh.net',
+//      port: 993,
+//      secure: true, // Utilisez true si vous utilisez SSL/TLS
+//      auth: {
+//          user: 'ndiogou.diop@c3s.sn',
+//          pass: 'P@sser2028'
+//      }
+//  });
+
+  // Configurer le transporteur SMTP
+  const transporter = nodemailer.createTransport({
+    service: 'SMTP',
+    host: 'smtp.mail.ovh.net', // 'ssl0.ovh.net',
+    port: 465,
+    secure: true, // Utilisez true si vous utilisez SSL/TLS
+    auth: {
+        user: 'ndiogou.diop@c3s.sn',
+        pass: 'P@sser2028'
+    }
+});
+
+     // Définir les informations de l'e-mail
+     const mailOptions = {
+         comom: " Support <ndiogou.diop@c3s.sn>",
+         to:email,
+         subject: 'Contact via app yataalMbinde',
+         html: `Mr ${prenom} ${nom} vient de vous contacter à propos de : \n ${message} \n NB :Son numéro de téléphone est ${telephone} .`
+     };
+
+     // Envoyer l'e-mail
+     await transporter.sendMail(mailOptions, (error, info) => {
+         if (error) {
+             console.log('Erreur lors de l\'envoi de l\'e-mail:', error);
+
+         } else {
+             console.log('E-mail envoyé avec succès:', info.response);
+
+         }
+     });
+     res.json(null);
+   } catch (error) {
+    console.log(error);
+    
+    res.json(null);
+   }
 
 }
 
